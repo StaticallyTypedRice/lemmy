@@ -3,7 +3,6 @@ import { PostForm } from './post-form';
 import { WebSocketService } from '../services';
 import { PostFormParams } from '../interfaces';
 import { i18n } from '../i18next';
-import { T } from 'inferno-i18next';
 
 export class CreatePost extends Component<any, any> {
   constructor(props: any, context: any) {
@@ -22,9 +21,7 @@ export class CreatePost extends Component<any, any> {
       <div class="container">
         <div class="row">
           <div class="col-12 col-lg-6 offset-lg-3 mb-4">
-            <h5>
-              <T i18nKey="create_post">#</T>
-            </h5>
+            <h5>{i18n.t('create_post')}</h5>
             <PostForm onCreate={this.handlePostCreate} params={this.params} />
           </div>
         </div>
@@ -35,7 +32,7 @@ export class CreatePost extends Component<any, any> {
   get params(): PostFormParams {
     let urlParams = new URLSearchParams(this.props.location.search);
     let params: PostFormParams = {
-      name: urlParams.get('name'),
+      name: urlParams.get('title'),
       community: urlParams.get('community') || this.prevCommunityName,
       body: urlParams.get('body'),
       url: urlParams.get('url'),

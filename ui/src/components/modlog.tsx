@@ -15,11 +15,12 @@ import {
   ModBan,
   ModAddCommunity,
   ModAdd,
+  WebSocketJsonResponse,
 } from '../interfaces';
 import { WebSocketService } from '../services';
-import { msgOp, addTypeInfo, fetchLimit } from '../utils';
+import { wsJsonToRes, addTypeInfo, fetchLimit, toast } from '../utils';
 import { MomentTime } from './moment-time';
-import * as moment from 'moment';
+import moment from 'moment';
 import { i18n } from '../i18next';
 
 interface ModlogState {
@@ -55,14 +56,7 @@ export class Modlog extends Component<any, ModlogState> {
       ? Number(this.props.match.params.community_id)
       : undefined;
     this.subscription = WebSocketService.Instance.subject
-      .pipe(
-        retryWhen(errors =>
-          errors.pipe(
-            delay(3000),
-            take(10)
-          )
-        )
-      )
+      .pipe(retryWhen(errors => errors.pipe(delay(3000), take(10))))
       .subscribe(
         msg => this.parseMessage(msg),
         err => console.error(err),
@@ -366,15 +360,15 @@ export class Modlog extends Component<any, ModlogState> {
                   /c/{this.state.communityName}{' '}
                 </Link>
               )}
-              <span>Modlog</span>
+              <span>{i18n.t('modlog')}</span>
             </h5>
             <div class="table-responsive">
               <table id="modlog_table" class="table table-sm table-hover">
                 <thead class="pointer">
                   <tr>
-                    <th>Time</th>
-                    <th>Mod</th>
-                    <th>Action</th>
+                    <th> {i18n.t('time')}</th>
+                    <th>{i18n.t('mod')}</th>
+                    <th>{i18n.t('action')}</th>
                   </tr>
                 </thead>
                 {this.combined()}
@@ -395,14 +389,14 @@ export class Modlog extends Component<any, ModlogState> {
             class="btn btn-sm btn-secondary mr-1"
             onClick={linkEvent(this, this.prevPage)}
           >
-            Prev
+            {i18n.t('prev')}
           </button>
         )}
         <button
           class="btn btn-sm btn-secondary"
           onClick={linkEvent(this, this.nextPage)}
         >
-          Next
+          {i18n.t('next')}
         </button>
       </div>
     );
@@ -429,17 +423,17 @@ export class Modlog extends Component<any, ModlogState> {
     WebSocketService.Instance.getModlog(modlogForm);
   }
 
-  parseMessage(msg: any) {
+  parseMessage(msg: WebSocketJsonResponse) {
     console.log(msg);
-    let op: UserOperation = msgOp(msg);
+    let res = wsJsonToRes(msg);
     if (msg.error) {
-      alert(i18n.t(msg.error));
+      toast(i18n.t(msg.error), 'danger');
       return;
-    } else if (op == UserOperation.GetModlog) {
-      let res: GetModlogResponse = msg;
+    } else if (res.op == UserOperation.GetModlog) {
+      let data = res.data as GetModlogResponse;
       this.state.loading = false;
       window.scrollTo(0, 0);
-      this.setCombined(res);
+      this.setCombined(data);
     }
   }
 }

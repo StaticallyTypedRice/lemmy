@@ -1,5 +1,5 @@
 <p align="center">
-  <a href="" rel="noopener">
+  <a href="https://dev.lemmy.ml/" rel="noopener">
  <img width=200px height=200px src="ui/assets/favicon.svg"></a>
 </p>
 
@@ -7,10 +7,8 @@
 
 <div align="center">
 
-[![Github](https://img.shields.io/badge/-Github-blue)](https://github.com/dessalines/lemmy)
-[![Gitlab](https://img.shields.io/badge/-Gitlab-yellowgreen)](https://gitlab.com/dessalines/lemmy)
-[![Mastodon Follow](https://img.shields.io/mastodon/follow/810572?domain=https%3A%2F%2Fmastodon.social&style=social)](https://mastodon.social/@LemmyDev)
 ![GitHub stars](https://img.shields.io/github/stars/dessalines/lemmy?style=social)
+[![Mastodon Follow](https://img.shields.io/mastodon/follow/810572?domain=https%3A%2F%2Fmastodon.social&style=social)](https://mastodon.social/@LemmyDev)
 [![Matrix](https://img.shields.io/matrix/rust-reddit-fediverse:matrix.org.svg?label=matrix-chat)](https://riot.im/app/#/room/#rust-reddit-fediverse:matrix.org)
 ![GitHub tag (latest SemVer)](https://img.shields.io/github/tag/dessalines/lemmy.svg)
 [![Build Status](https://travis-ci.org/dessalines/lemmy.svg?branch=master)](https://travis-ci.org/dessalines/lemmy)
@@ -28,7 +26,7 @@
     <br> 
 </p>
 
-[Lemmy Dev instance](https://dev.lemmy.ml) *for testing purposes only*
+[Lemmy Dev instance](https://dev.lemmy.ml) *This data is being backed up, and once federation is working, it will be the basis for a main instance.*
 
 This is a **very early beta version**, and a lot of features are currently broken or in active development, such as federation.
 
@@ -44,9 +42,17 @@ The overall goal is to create an easily self-hostable, decentralized alternative
 
 Each lemmy server can set its own moderation policy; appointing site-wide admins, and community moderators to keep out the trolls, and foster a healthy, non-toxic environment where all can feel comfortable contributing.
 
-Made with [Rust](https://www.rust-lang.org), [Actix](https://actix.rs/), [Inferno](https://www.infernojs.org), [Typescript](https://www.typescriptlang.org/) and [Diesel](http://diesel.rs/).
+Made with [Rust](https://www.rust-lang.org), [Actix](https://actix.rs/), [Inferno](https://infernojs.org), [Typescript](https://www.typescriptlang.org/) and [Diesel](http://diesel.rs/).
 
-[Documentation](https://dev.lemmy.ml/docs/index.html)
+- [Documentation](https://dev.lemmy.ml/docs/index.html)
+- [Releases / Changelog](/RELEASES.md)
+- [Contributing](https://dev.lemmy.ml/docs/contributing.html)
+
+## Repository Mirrors
+
+- [GitHub](https://github.com/dessalines/lemmy)
+- [Gitea](https://yerbamate.dev/dessalines/lemmy)
+- [GitLab](https://gitlab.com/dessalines/lemmy)
 
 ## Features
 
@@ -54,18 +60,24 @@ Made with [Rust](https://www.rust-lang.org), [Actix](https://actix.rs/), [Infern
 - Self hostable, easy to deploy.
   - Comes with [Docker](#docker), [Ansible](#ansible), [Kubernetes](#kubernetes).
 - Clean, mobile-friendly interface.
+  - Only a minimum of a username and password is required to sign up!
+  - User avatar support.
   - Live-updating Comment threads.
   - Full vote scores `(+/-)` like old reddit.
   - Themes, including light, dark, and solarized.
   - Emojis with autocomplete support. Start typing `:`
   - User tagging using `@`, Community tagging using `#`.
+  - Integrated image uploading in both posts and comments.
+  - A post can consist of a title and any combination of self text, a URL, or nothing else.
   - Notifications, on comment replies and when you're tagged.
+    - Notifications can be sent via email.
   - i18n / internationalization support.
   - RSS / Atom feeds for `All`, `Subscribed`, `Inbox`, `User`, and `Community`.
 - Cross-posting support.
   - A *similar post search* when creating new posts. Great for question / answer communities.
 - Moderation abilities.
   - Public Moderation Logs.
+  - Can sticky posts to the top of communities.
   - Both site admins, and community moderators, who can appoint other moderators.
   - Can lock, remove, and restore posts and comments.
   - Can ban and unban users from communities and the site.
@@ -101,7 +113,7 @@ docker-compose up -d
 
 and go to http://localhost:8536.
 
-[A sample nginx config](/ansible/templates/nginx.conf), could be setup with:
+[A sample nginx config](/ansible/templates/nginx.conf) (Image uploading won't work without this), could be setup with:
 
 ```bash
 wget https://raw.githubusercontent.com/dessalines/lemmy/master/ansible/templates/nginx.conf
@@ -131,39 +143,49 @@ nano inventory # enter your server, domain, contact email
 ansible-playbook lemmy.yml --become
 ```
 
-## Support
+## Support / Donate
 
 Lemmy is free, open-source software, meaning no advertising, monetizing, or venture capital, ever. Your donations directly support full-time development of the project.
 
 - [Support on Patreon](https://www.patreon.com/dessalines).
-- [Sponsor List](https://dev.lemmy.ml/sponsors).
+- [List of Sponsors](https://dev.lemmy.ml/sponsors).
+- Soon to add either liberapay or opencollective.
+
+### Crypto
+
 - bitcoin: `1Hefs7miXS5ff5Ck5xvmjKjXf5242KzRtK`
 - ethereum: `0x400c96c96acbC6E7B3B43B1dc1BB446540a88A01`
 - monero: `41taVyY6e1xApqKyMVDRVxJ76sPkfZhALLTjRvVKpaAh2pBd4wv9RgYj1tSPrx8wc6iE1uWUfjtQdTmTy2FGMeChGVKPQuV`
 
 ## Translations 
 
-If you'd like to add translations, take a look a look at the [English translation file](ui/src/translations/en.ts).
+If you'd like to add translations, take a look at the [English translation file](ui/src/translations/en.ts).
 
-- Languages supported: English (`en`), Chinese (`zh`), Dutch (`nl`), Esperanto (`eo`), French (`fr`), Spanish (`es`), Swedish (`sv`), German (`de`), Russian (`ru`), Italian (`it`).
+- Languages supported: Catalan, (`ca`), Farsi (`fa`), English (`en`), Chinese (`zh`), Dutch (`nl`), Esperanto (`eo`), Finnish (`fi`), French (`fr`), Spanish (`es`), Swedish (`sv`), German (`de`), Russian (`ru`), Italian (`it`).
+
+<!-- translations -->
 
 lang | done | missing
---- | --- | ---
-de | 95% | avatar,show_avatars,docs,old_password,send_notifications_to_email,downvotes_disabled,enable_downvotes,open_registration,registration_closed,enable_nsfw 
-eo | 82% | number_of_communities,preview,upload_image,avatar,show_avatars,formatting_help,view_source,sticky,unsticky,archive_link,stickied,delete_account,delete_account_confirm,banned,creator,number_online,docs,replies,mentions,old_password,forgot_password,reset_password_mail_sent,password_change,new_password,no_email_setup,send_notifications_to_email,language,browser_default,downvotes_disabled,enable_downvotes,open_registration,registration_closed,enable_nsfw,theme,are_you_sure,yes,no 
-es | 90% | avatar,show_avatars,archive_link,docs,replies,mentions,old_password,forgot_password,reset_password_mail_sent,password_change,new_password,no_email_setup,send_notifications_to_email,language,browser_default,downvotes_disabled,enable_downvotes,open_registration,registration_closed,enable_nsfw 
-fr | 90% | avatar,show_avatars,archive_link,docs,replies,mentions,old_password,forgot_password,reset_password_mail_sent,password_change,new_password,no_email_setup,send_notifications_to_email,language,browser_default,downvotes_disabled,enable_downvotes,open_registration,registration_closed,enable_nsfw 
-it | 91% | avatar,show_avatars,archive_link,docs,old_password,forgot_password,reset_password_mail_sent,password_change,new_password,no_email_setup,send_notifications_to_email,language,browser_default,downvotes_disabled,enable_downvotes,open_registration,registration_closed,enable_nsfw 
-nl | 84% | preview,upload_image,avatar,show_avatars,formatting_help,view_source,sticky,unsticky,archive_link,stickied,delete_account,delete_account_confirm,banned,creator,number_online,docs,replies,mentions,old_password,forgot_password,reset_password_mail_sent,password_change,new_password,no_email_setup,send_notifications_to_email,language,browser_default,downvotes_disabled,enable_downvotes,open_registration,registration_closed,enable_nsfw,theme 
-ru | 78% | cross_posts,cross_post,number_of_communities,preview,upload_image,avatar,show_avatars,formatting_help,view_source,sticky,unsticky,archive_link,stickied,delete_account,delete_account_confirm,banned,creator,number_online,docs,replies,mentions,old_password,forgot_password,reset_password_mail_sent,password_change,new_password,no_email_setup,send_notifications_to_email,language,browser_default,downvotes_disabled,enable_downvotes,open_registration,registration_closed,enable_nsfw,recent_comments,theme,monero,by,to,transfer_community,transfer_site,are_you_sure,yes,no 
-sv | 90% | avatar,show_avatars,archive_link,docs,replies,mentions,old_password,forgot_password,reset_password_mail_sent,password_change,new_password,no_email_setup,send_notifications_to_email,language,browser_default,downvotes_disabled,enable_downvotes,open_registration,registration_closed,enable_nsfw 
-zh | 76% | cross_posts,cross_post,users,number_of_communities,preview,upload_image,avatar,show_avatars,formatting_help,view_source,sticky,unsticky,archive_link,settings,stickied,delete_account,delete_account_confirm,banned,creator,number_online,docs,replies,mentions,old_password,forgot_password,reset_password_mail_sent,password_change,new_password,no_email_setup,send_notifications_to_email,language,browser_default,downvotes_disabled,enable_downvotes,open_registration,registration_closed,enable_nsfw,recent_comments,nsfw,show_nsfw,theme,monero,by,to,transfer_community,transfer_site,are_you_sure,yes,no 
+---- | ---- | -------
+ca | 98% | cross_posted_to,old,time,action
+de | 86% | cross_posted_to,create_private_message,send_secure_message,send_message,message,avatar,upload_avatar,show_avatars,old,docs,message_sent,messages,old_password,matrix_user_id,private_message_disclaimer,send_notifications_to_email,downvotes_disabled,enable_downvotes,open_registration,registration_closed,enable_nsfw,donate_to_lemmy,donate,from,logged_in,email_already_exists,couldnt_create_private_message,no_private_message_edit_allowed,couldnt_update_private_message,time,action
+fa | 72% | cross_post,cross_posted_to,subscribed_to_communities,trending_communities,create_private_message,send_secure_message,send_message,message,mod,mods,moderates,remove_as_mod,appoint_as_mod,modlog,stickied,ban,ban_from_site,unban,unban_from_site,banned,number_of_subscribers,subscribers,both,saved,unsubscribe,subscribe,subscribed,old,api,docs,inbox,inbox_for,message_sent,notifications_error,messages,no_email_setup,matrix_user_id,private_message_disclaimer,url,body,copy_suggested_title,community,expand_here,subscribe_to_communities,theme,sponsor_message,general_sponsors,joined,by,to,from,landing_0,logged_in,community_moderator_already_exists,community_follower_already_exists,community_user_already_banned,no_slurs,admin_already_created,couldnt_create_private_message,no_private_message_edit_allowed,couldnt_update_private_message,time,action
+eo | 74% | cross_posted_to,number_of_communities,create_private_message,send_secure_message,send_message,message,preview,upload_image,avatar,upload_avatar,show_avatars,formatting_help,view_source,sticky,unsticky,archive_link,stickied,delete_account,delete_account_confirm,banned,creator,number_online,old,docs,replies,mentions,message_sent,messages,old_password,forgot_password,reset_password_mail_sent,password_change,new_password,no_email_setup,matrix_user_id,private_message_disclaimer,send_notifications_to_email,language,browser_default,downvotes_disabled,enable_downvotes,open_registration,registration_closed,enable_nsfw,theme,donate_to_lemmy,donate,from,are_you_sure,yes,no,logged_in,email_already_exists,couldnt_create_private_message,no_private_message_edit_allowed,couldnt_update_private_message,time,action
+es | 100% | cross_posted_to
+fi | 98% | cross_posted_to,old,time,action
+fr | 82% | cross_posted_to,create_private_message,send_secure_message,send_message,message,avatar,upload_avatar,show_avatars,archive_link,old,docs,replies,mentions,message_sent,messages,old_password,forgot_password,reset_password_mail_sent,password_change,new_password,no_email_setup,matrix_user_id,private_message_disclaimer,send_notifications_to_email,language,browser_default,downvotes_disabled,enable_downvotes,open_registration,registration_closed,enable_nsfw,donate_to_lemmy,donate,from,logged_in,email_already_exists,couldnt_create_private_message,no_private_message_edit_allowed,couldnt_update_private_message,time,action
+it | 83% | cross_posted_to,create_private_message,send_secure_message,send_message,message,avatar,upload_avatar,show_avatars,archive_link,old,docs,message_sent,messages,old_password,forgot_password,reset_password_mail_sent,password_change,new_password,no_email_setup,matrix_user_id,private_message_disclaimer,send_notifications_to_email,language,browser_default,downvotes_disabled,enable_downvotes,open_registration,registration_closed,enable_nsfw,donate_to_lemmy,donate,from,logged_in,email_already_exists,couldnt_create_private_message,no_private_message_edit_allowed,couldnt_update_private_message,time,action
+nl | 99% | cross_posted_to,time,action
+ru | 71% | cross_posts,cross_post,cross_posted_to,number_of_communities,create_private_message,send_secure_message,send_message,message,preview,upload_image,avatar,upload_avatar,show_avatars,formatting_help,view_source,sticky,unsticky,archive_link,stickied,delete_account,delete_account_confirm,banned,creator,number_online,old,docs,replies,mentions,message_sent,messages,old_password,forgot_password,reset_password_mail_sent,password_change,new_password,no_email_setup,matrix_user_id,private_message_disclaimer,send_notifications_to_email,language,browser_default,downvotes_disabled,enable_downvotes,open_registration,registration_closed,enable_nsfw,recent_comments,theme,donate_to_lemmy,donate,monero,by,to,from,transfer_community,transfer_site,are_you_sure,yes,no,logged_in,email_already_exists,couldnt_create_private_message,no_private_message_edit_allowed,couldnt_update_private_message,time,action
+sv | 82% | cross_posted_to,create_private_message,send_secure_message,send_message,message,avatar,upload_avatar,show_avatars,archive_link,old,docs,replies,mentions,message_sent,messages,old_password,forgot_password,reset_password_mail_sent,password_change,new_password,no_email_setup,matrix_user_id,private_message_disclaimer,send_notifications_to_email,language,browser_default,downvotes_disabled,enable_downvotes,open_registration,registration_closed,enable_nsfw,donate_to_lemmy,donate,from,logged_in,email_already_exists,couldnt_create_private_message,no_private_message_edit_allowed,couldnt_update_private_message,time,action
+zh | 69% | cross_posts,cross_post,cross_posted_to,users,number_of_communities,create_private_message,send_secure_message,send_message,message,preview,upload_image,avatar,upload_avatar,show_avatars,formatting_help,view_source,sticky,unsticky,archive_link,settings,stickied,delete_account,delete_account_confirm,banned,creator,number_online,old,docs,replies,mentions,message_sent,messages,old_password,forgot_password,reset_password_mail_sent,password_change,new_password,no_email_setup,matrix_user_id,private_message_disclaimer,send_notifications_to_email,language,browser_default,downvotes_disabled,enable_downvotes,open_registration,registration_closed,enable_nsfw,recent_comments,nsfw,show_nsfw,theme,donate_to_lemmy,donate,monero,by,to,from,transfer_community,transfer_site,are_you_sure,yes,no,logged_in,email_already_exists,couldnt_create_private_message,no_private_message_edit_allowed,couldnt_update_private_message,time,action
+<!-- translationsstop -->
 
 If you'd like to update this report, run:
 
 ```bash 
 cd ui
-ts-node translation_report.ts > tmp # And replace the text above.
+ts-node translation_report.ts
 ```
 
 ## Credits

@@ -3,7 +3,6 @@ extern crate reqwest;
 use self::reqwest::Error;
 use crate::api::community::{GetCommunityResponse, ListCommunitiesResponse};
 use crate::api::post::GetPosts;
-use crate::api::UserOperation;
 use crate::db::community_view::CommunityView;
 use crate::naive_now;
 use crate::settings::Settings;
@@ -44,7 +43,6 @@ pub fn get_remote_community(identifier: String) -> Result<GetCommunityResponse, 
   // TODO: i dont think simple numeric ids are going to work, we probably need something like uuids
   // TODO: why are the Group properties not typed?
   Ok(GetCommunityResponse {
-    op: UserOperation::GetCommunity.to_string(),
     moderators: vec![],
     admins: vec![],
     community: CommunityView {
@@ -69,6 +67,7 @@ pub fn get_remote_community(identifier: String) -> Result<GetCommunityResponse, 
       user_id: None,
       subscribed: None,
     },
+    online: 0,
   })
 }
 

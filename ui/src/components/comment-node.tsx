@@ -30,7 +30,6 @@ import { MomentTime } from './moment-time';
 import { CommentForm } from './comment-form';
 import { CommentNodes } from './comment-nodes';
 import { i18n } from '../i18next';
-import { T } from 'inferno-i18next';
 
 interface CommentNodeState {
   showReply: boolean;
@@ -47,6 +46,8 @@ interface CommentNodeState {
   showConfirmAppointAsAdmin: boolean;
   collapsed: boolean;
   viewSource: boolean;
+  upvoteLoading: boolean;
+  downvoteLoading: boolean;
 }
 
 interface CommentNodeProps {
@@ -76,6 +77,8 @@ export class CommentNode extends Component<CommentNodeProps, CommentNodeState> {
     showConfirmTransferCommunity: false,
     showConfirmAppointAsMod: false,
     showConfirmAppointAsAdmin: false,
+    upvoteLoading: this.props.node.comment.upvoteLoading,
+    downvoteLoading: this.props.node.comment.downvoteLoading,
   };
 
   constructor(props: any, context: any) {
@@ -83,8 +86,20 @@ export class CommentNode extends Component<CommentNodeProps, CommentNodeState> {
 
     this.state = this.emptyState;
     this.handleReplyCancel = this.handleReplyCancel.bind(this);
-    this.handleCommentLike = this.handleCommentLike.bind(this);
-    this.handleCommentDisLike = this.handleCommentDisLike.bind(this);
+    this.handleCommentUpvote = this.handleCommentUpvote.bind(this);
+    this.handleCommentDownvote = this.handleCommentDownvote.bind(this);
+  }
+
+  componentWillReceiveProps(nextProps: CommentNodeProps) {
+    if (
+      nextProps.node.comment.upvoteLoading !== this.state.upvoteLoading ||
+      nextProps.node.comment.downvoteLoading !== this.state.downvoteLoading
+    ) {
+      this.setState({
+        upvoteLoading: false,
+        downvoteLoading: false,
+      });
+    }
   }
 
   render() {
@@ -101,28 +116,40 @@ export class CommentNode extends Component<CommentNodeProps, CommentNodeState> {
               .viewOnly && 'no-click'}`}
           >
             <button
-              className={`btn p-0 ${
+              className={`btn btn-link p-0 ${
                 node.comment.my_vote == 1 ? 'text-info' : 'text-muted'
               }`}
-              onClick={linkEvent(node, this.handleCommentLike)}
+              onClick={linkEvent(node, this.handleCommentUpvote)}
             >
-              <svg class="icon upvote">
-                <use xlinkHref="#icon-arrow-up"></use>
-              </svg>
+              {this.state.upvoteLoading ? (
+                <svg class="icon icon-spinner spin upvote">
+                  <use xlinkHref="#icon-spinner"></use>
+                </svg>
+              ) : (
+                <svg class="icon upvote">
+                  <use xlinkHref="#icon-arrow-up"></use>
+                </svg>
+              )}
             </button>
             <div class={`font-weight-bold text-muted`}>
               {node.comment.score}
             </div>
             {WebSocketService.Instance.site.enable_downvotes && (
               <button
-                className={`btn p-0 ${
+                className={`btn btn-link p-0 ${
                   node.comment.my_vote == -1 ? 'text-danger' : 'text-muted'
                 }`}
-                onClick={linkEvent(node, this.handleCommentDisLike)}
+                onClick={linkEvent(node, this.handleCommentDownvote)}
               >
-                <svg class="icon downvote">
-                  <use xlinkHref="#icon-arrow-down"></use>
-                </svg>
+                {this.state.downvoteLoading ? (
+                  <svg class="icon icon-spinner spin downvote">
+                    <use xlinkHref="#icon-spinner"></use>
+                  </svg>
+                ) : (
+                  <svg class="icon downvote">
+                    <use xlinkHref="#icon-arrow-down"></use>
+                  </svg>
+                )}
               </button>
             )}
           </div>
@@ -152,22 +179,22 @@ export class CommentNode extends Component<CommentNodeProps, CommentNodeState> {
             </li>
             {this.isMod && (
               <li className="list-inline-item badge badge-light">
-                <T i18nKey="mod">#</T>
+                {i18n.t('mod')}
               </li>
             )}
             {this.isAdmin && (
               <li className="list-inline-item badge badge-light">
-                <T i18nKey="admin">#</T>
+                {i18n.t('admin')}
               </li>
             )}
             {this.isPostCreator && (
               <li className="list-inline-item badge badge-light">
-                <T i18nKey="creator">#</T>
+                {i18n.t('creator')}
               </li>
             )}
             {(node.comment.banned_from_community || node.comment.banned) && (
               <li className="list-inline-item badge badge-danger">
-                <T i18nKey="banned">#</T>
+                {i18n.t('banned')}
               </li>
             )}
             <li className="list-inline-item">
@@ -230,7 +257,7 @@ export class CommentNode extends Component<CommentNodeProps, CommentNodeState> {
                         class="pointer"
                         onClick={linkEvent(this, this.handleReplyClick)}
                       >
-                        <T i18nKey="reply">#</T>
+                        {i18n.t('reply')}
                       </span>
                     </li>
                     <li className="list-inline-item mr-2">
@@ -248,7 +275,7 @@ export class CommentNode extends Component<CommentNodeProps, CommentNodeState> {
                             class="pointer"
                             onClick={linkEvent(this, this.handleEditClick)}
                           >
-                            <T i18nKey="edit">#</T>
+                            {i18n.t('edit')}
                           </span>
                         </li>
                         <li className="list-inline-item">
@@ -263,13 +290,23 @@ export class CommentNode extends Component<CommentNodeProps, CommentNodeState> {
                         </li>
                       </>
                     )}
+                    {!this.myComment && (
+                      <li className="list-inline-item">
+                        <Link
+                          class="text-muted"
+                          to={`/create_private_message?recipient_id=${node.comment.creator_id}`}
+                        >
+                          {i18n.t('message').toLowerCase()}
+                        </Link>
+                      </li>
+                    )}
                     <li className="list-inline-item">•</li>
                     <li className="list-inline-item">
                       <span
                         className="pointer"
                         onClick={linkEvent(this, this.handleViewSource)}
                       >
-                        <T i18nKey="view_source">#</T>
+                        {i18n.t('view_source')}
                       </span>
                     </li>
                     <li className="list-inline-item">
@@ -277,7 +314,7 @@ export class CommentNode extends Component<CommentNodeProps, CommentNodeState> {
                         className="text-muted"
                         to={`/post/${node.comment.post_id}/comment/${node.comment.id}`}
                       >
-                        <T i18nKey="link">#</T>
+                        {i18n.t('link')}
                       </Link>
                     </li>
                     {/* Admins and mods can remove comments */}
@@ -293,7 +330,7 @@ export class CommentNode extends Component<CommentNodeProps, CommentNodeState> {
                                 this.handleModRemoveShow
                               )}
                             >
-                              <T i18nKey="remove">#</T>
+                              {i18n.t('remove')}
                             </span>
                           ) : (
                             <span
@@ -303,7 +340,7 @@ export class CommentNode extends Component<CommentNodeProps, CommentNodeState> {
                                 this.handleModRemoveSubmit
                               )}
                             >
-                              <T i18nKey="restore">#</T>
+                              {i18n.t('restore')}
                             </span>
                           )}
                         </li>
@@ -322,7 +359,7 @@ export class CommentNode extends Component<CommentNodeProps, CommentNodeState> {
                                   this.handleModBanFromCommunityShow
                                 )}
                               >
-                                <T i18nKey="ban">#</T>
+                                {i18n.t('ban')}
                               </span>
                             ) : (
                               <span
@@ -332,7 +369,7 @@ export class CommentNode extends Component<CommentNodeProps, CommentNodeState> {
                                   this.handleModBanFromCommunitySubmit
                                 )}
                               >
-                                <T i18nKey="unban">#</T>
+                                {i18n.t('unban')}
                               </span>
                             )}
                           </li>
@@ -354,7 +391,7 @@ export class CommentNode extends Component<CommentNodeProps, CommentNodeState> {
                             ) : (
                               <>
                                 <span class="d-inline-block mr-1">
-                                  <T i18nKey="are_you_sure">#</T>
+                                  {i18n.t('are_you_sure')}
                                 </span>
                                 <span
                                   class="pointer d-inline-block mr-1"
@@ -363,7 +400,7 @@ export class CommentNode extends Component<CommentNodeProps, CommentNodeState> {
                                     this.handleAddModToCommunity
                                   )}
                                 >
-                                  <T i18nKey="yes">#</T>
+                                  {i18n.t('yes')}
                                 </span>
                                 <span
                                   class="pointer d-inline-block"
@@ -372,7 +409,7 @@ export class CommentNode extends Component<CommentNodeProps, CommentNodeState> {
                                     this.handleCancelConfirmAppointAsMod
                                   )}
                                 >
-                                  <T i18nKey="no">#</T>
+                                  {i18n.t('no')}
                                 </span>
                               </>
                             )}
@@ -391,12 +428,12 @@ export class CommentNode extends Component<CommentNodeProps, CommentNodeState> {
                               this.handleShowConfirmTransferCommunity
                             )}
                           >
-                            <T i18nKey="transfer_community">#</T>
+                            {i18n.t('transfer_community')}
                           </span>
                         ) : (
                           <>
                             <span class="d-inline-block mr-1">
-                              <T i18nKey="are_you_sure">#</T>
+                              {i18n.t('are_you_sure')}
                             </span>
                             <span
                               class="pointer d-inline-block mr-1"
@@ -405,7 +442,7 @@ export class CommentNode extends Component<CommentNodeProps, CommentNodeState> {
                                 this.handleTransferCommunity
                               )}
                             >
-                              <T i18nKey="yes">#</T>
+                              {i18n.t('yes')}
                             </span>
                             <span
                               class="pointer d-inline-block"
@@ -414,7 +451,7 @@ export class CommentNode extends Component<CommentNodeProps, CommentNodeState> {
                                 this.handleCancelShowConfirmTransferCommunity
                               )}
                             >
-                              <T i18nKey="no">#</T>
+                              {i18n.t('no')}
                             </span>
                           </>
                         )}
@@ -430,7 +467,7 @@ export class CommentNode extends Component<CommentNodeProps, CommentNodeState> {
                                 class="pointer"
                                 onClick={linkEvent(this, this.handleModBanShow)}
                               >
-                                <T i18nKey="ban_from_site">#</T>
+                                {i18n.t('ban_from_site')}
                               </span>
                             ) : (
                               <span
@@ -440,7 +477,7 @@ export class CommentNode extends Component<CommentNodeProps, CommentNodeState> {
                                   this.handleModBanSubmit
                                 )}
                               >
-                                <T i18nKey="unban_from_site">#</T>
+                                {i18n.t('unban_from_site')}
                               </span>
                             )}
                           </li>
@@ -462,13 +499,13 @@ export class CommentNode extends Component<CommentNodeProps, CommentNodeState> {
                             ) : (
                               <>
                                 <span class="d-inline-block mr-1">
-                                  <T i18nKey="are_you_sure">#</T>
+                                  {i18n.t('are_you_sure')}
                                 </span>
                                 <span
                                   class="pointer d-inline-block mr-1"
                                   onClick={linkEvent(this, this.handleAddAdmin)}
                                 >
-                                  <T i18nKey="yes">#</T>
+                                  {i18n.t('yes')}
                                 </span>
                                 <span
                                   class="pointer d-inline-block"
@@ -477,7 +514,7 @@ export class CommentNode extends Component<CommentNodeProps, CommentNodeState> {
                                     this.handleCancelConfirmAppointAsAdmin
                                   )}
                                 >
-                                  <T i18nKey="no">#</T>
+                                  {i18n.t('no')}
                                 </span>
                               </>
                             )}
@@ -496,18 +533,18 @@ export class CommentNode extends Component<CommentNodeProps, CommentNodeState> {
                               this.handleShowConfirmTransferSite
                             )}
                           >
-                            <T i18nKey="transfer_site">#</T>
+                            {i18n.t('transfer_site')}
                           </span>
                         ) : (
                           <>
                             <span class="d-inline-block mr-1">
-                              <T i18nKey="are_you_sure">#</T>
+                              {i18n.t('are_you_sure')}
                             </span>
                             <span
                               class="pointer d-inline-block mr-1"
                               onClick={linkEvent(this, this.handleTransferSite)}
                             >
-                              <T i18nKey="yes">#</T>
+                              {i18n.t('yes')}
                             </span>
                             <span
                               class="pointer d-inline-block"
@@ -516,7 +553,7 @@ export class CommentNode extends Component<CommentNodeProps, CommentNodeState> {
                                 this.handleCancelShowConfirmTransferSite
                               )}
                             >
-                              <T i18nKey="no">#</T>
+                              {i18n.t('no')}
                             </span>
                           </>
                         )}
@@ -541,16 +578,14 @@ export class CommentNode extends Component<CommentNodeProps, CommentNodeState> {
               onInput={linkEvent(this, this.handleModRemoveReasonChange)}
             />
             <button type="submit" class="btn btn-secondary">
-              <T i18nKey="remove_comment">#</T>
+              {i18n.t('remove_comment')}
             </button>
           </form>
         )}
         {this.state.showBanDialog && (
           <form onSubmit={linkEvent(this, this.handleModBanBothSubmit)}>
             <div class="form-group row">
-              <label class="col-form-label">
-                <T i18nKey="reason">#</T>
-              </label>
+              <label class="col-form-label">{i18n.t('reason')}</label>
               <input
                 type="text"
                 class="form-control mr-2"
@@ -720,7 +755,12 @@ export class CommentNode extends Component<CommentNodeProps, CommentNodeState> {
     this.setState(this.state);
   }
 
-  handleCommentLike(i: CommentNodeI) {
+  handleCommentUpvote(i: CommentNodeI) {
+    if (UserService.Instance.user) {
+      this.setState({
+        upvoteLoading: true,
+      });
+    }
     let form: CommentLikeForm = {
       comment_id: i.comment.id,
       post_id: i.comment.post_id,
@@ -729,7 +769,12 @@ export class CommentNode extends Component<CommentNodeProps, CommentNodeState> {
     WebSocketService.Instance.likeComment(form);
   }
 
-  handleCommentDisLike(i: CommentNodeI) {
+  handleCommentDownvote(i: CommentNodeI) {
+    if (UserService.Instance.user) {
+      this.setState({
+        downvoteLoading: true,
+      });
+    }
     let form: CommentLikeForm = {
       comment_id: i.comment.id,
       post_id: i.comment.post_id,

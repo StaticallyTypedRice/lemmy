@@ -7,21 +7,32 @@ import 'moment/locale/sv';
 import 'moment/locale/ru';
 import 'moment/locale/nl';
 import 'moment/locale/it';
+import 'moment/locale/fi';
+import 'moment/locale/ca';
+import 'moment/locale/fa';
 
 import {
   UserOperation,
   Comment,
+  PrivateMessage,
   User,
   SortType,
   ListingType,
   SearchType,
+  WebSocketResponse,
+  WebSocketJsonResponse,
+  SearchForm,
+  SearchResponse,
 } from './interfaces';
-import { UserService } from './services/UserService';
+import { UserService, WebSocketService } from './services';
+
+import Tribute from 'tributejs/src/Tribute.js';
 import markdown_it from 'markdown-it';
 import markdownitEmoji from 'markdown-it-emoji/light';
 import markdown_it_container from 'markdown-it-container';
-import * as twemoji from 'twemoji';
-import * as emojiShortName from 'emoji-short-name';
+import twemoji from 'twemoji';
+import emojiShortName from 'emoji-short-name';
+import Toastify from 'toastify-js';
 
 export const repoUrl = 'https://github.com/dessalines/lemmy';
 export const markdownHelpUrl = 'https://commonmark.org/help/';
@@ -29,7 +40,7 @@ export const archiveUrl = 'https://archive.is';
 
 export const postRefetchSeconds: number = 60 * 1000;
 export const fetchLimit: number = 20;
-export const mentionDropdownFetchLimit = 6;
+export const mentionDropdownFetchLimit = 10;
 
 export function randomStr() {
   return Math.random()
@@ -38,9 +49,12 @@ export function randomStr() {
     .substr(2, 10);
 }
 
-export function msgOp(msg: any): UserOperation {
+export function wsJsonToRes(msg: WebSocketJsonResponse): WebSocketResponse {
   let opStr: string = msg.op;
-  return UserOperation[opStr];
+  return {
+    op: UserOperation[opStr],
+    data: msg.data,
+  };
 }
 
 export const md = new markdown_it({
@@ -201,7 +215,7 @@ export function debounce(
   // 'private' variable for instance
   // The returned function will be able to reference this due to closure.
   // Each call to the returned function will share this common timer.
-  let timeout: number;
+  let timeout: any;
 
   // Calling debounce returns a new anonymous function
   return function() {
@@ -240,11 +254,14 @@ export function debounce(
 }
 
 export const languages = [
+  { code: 'ca', name: 'Català' },
   { code: 'en', name: 'English' },
   { code: 'eo', name: 'Esperanto' },
   { code: 'es', name: 'Español' },
   { code: 'de', name: 'Deutsch' },
+  { code: 'fa', name: 'فارسی' },
   { code: 'zh', name: '中文' },
+  { code: 'fi', name: 'Suomi' },
   { code: 'fr', name: 'Français' },
   { code: 'sv', name: 'Svenska' },
   { code: 'ru', name: 'Русский' },
@@ -287,6 +304,12 @@ export function getMomentLanguage(): string {
     lang = 'nl';
   } else if (lang.startsWith('it')) {
     lang = 'it';
+  } else if (lang.startsWith('fi')) {
+    lang = 'fi';
+  } else if (lang.startsWith('ca')) {
+    lang = 'ca';
+  } else if (lang.startsWith('fa')) {
+    lang = 'fa';
   } else {
     lang = 'en';
   }
@@ -295,6 +318,7 @@ export function getMomentLanguage(): string {
 
 export const themes = [
   'litera',
+  'materia',
   'minty',
   'solar',
   'united',
@@ -304,6 +328,7 @@ export const themes = [
   'sketchy',
   'vaporwave',
   'vaporwave-dark',
+  'i386',
 ];
 
 export function setTheme(theme: string = 'darkly') {
@@ -359,5 +384,134 @@ export function imageThumbnailer(url: string): string {
     return out;
   } else {
     return url;
+  }
+}
+
+export function isCommentType(item: Comment | PrivateMessage): item is Comment {
+  return (item as Comment).community_id !== undefined;
+}
+
+export function toast(text: string, background: string = 'success') {
+  let backgroundColor = `var(--${background})`;
+  Toastify({
+    text: text,
+    backgroundColor: backgroundColor,
+    gravity: 'bottom',
+    position: 'left',
+  }).showToast();
+}
+
+export function setupTribute(): Tribute {
+  return new Tribute({
+    collection: [
+      // Emojis
+      {
+        trigger: ':',
+        menuItemTemplate: (item: any) => {
+          let emoji = `:${item.original.key}:`;
+          return `${item.original.val} ${emoji}`;
+        },
+        selectTemplate: (item: any) => {
+          return `:${item.original.key}:`;
+        },
+        values: Object.entries(emojiShortName).map(e => {
+          return { key: e[1], val: e[0] };
+        }),
+        allowSpaces: false,
+        autocompleteMode: true,
+        menuItemLimit: mentionDropdownFetchLimit,
+      },
+      // Users
+      {
+        trigger: '@',
+        selectTemplate: (item: any) => {
+          return `[/u/${item.original.key}](/u/${item.original.key})`;
+        },
+        values: (text: string, cb: any) => {
+          userSearch(text, (users: any) => cb(users));
+        },
+        allowSpaces: false,
+        autocompleteMode: true,
+        menuItemLimit: mentionDropdownFetchLimit,
+      },
+
+      // Communities
+      {
+        trigger: '#',
+        selectTemplate: (item: any) => {
+          return `[/c/${item.original.key}](/c/${item.original.key})`;
+        },
+        values: (text: string, cb: any) => {
+          communitySearch(text, (communities: any) => cb(communities));
+        },
+        allowSpaces: false,
+        autocompleteMode: true,
+        menuItemLimit: mentionDropdownFetchLimit,
+      },
+    ],
+  });
+}
+
+function userSearch(text: string, cb: any) {
+  if (text) {
+    let form: SearchForm = {
+      q: text,
+      type_: SearchType[SearchType.Users],
+      sort: SortType[SortType.TopAll],
+      page: 1,
+      limit: mentionDropdownFetchLimit,
+    };
+
+    WebSocketService.Instance.search(form);
+
+    this.userSub = WebSocketService.Instance.subject.subscribe(
+      msg => {
+        let res = wsJsonToRes(msg);
+        if (res.op == UserOperation.Search) {
+          let data = res.data as SearchResponse;
+          let users = data.users.map(u => {
+            return { key: u.name };
+          });
+          cb(users);
+          this.userSub.unsubscribe();
+        }
+      },
+      err => console.error(err),
+      () => console.log('complete')
+    );
+  } else {
+    cb([]);
+  }
+}
+
+function communitySearch(text: string, cb: any) {
+  if (text) {
+    let form: SearchForm = {
+      q: text,
+      type_: SearchType[SearchType.Communities],
+      sort: SortType[SortType.TopAll],
+      page: 1,
+      limit: mentionDropdownFetchLimit,
+    };
+
+    WebSocketService.Instance.search(form);
+
+    this.communitySub = WebSocketService.Instance.subject.subscribe(
+      msg => {
+        let res = wsJsonToRes(msg);
+        if (res.op == UserOperation.Search) {
+          let data = res.data as SearchResponse;
+          let communities = data.communities.map(u => {
+            return { key: u.name };
+          });
+          cb(communities);
+          this.communitySub.unsubscribe();
+        }
+      },
+      err => console.error(err),
+      () => console.log('complete')
+    );
+  } else {
+    cb([]);
   }
 }

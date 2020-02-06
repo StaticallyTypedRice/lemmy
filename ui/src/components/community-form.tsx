@@ -8,12 +8,19 @@ import {
   ListCategoriesResponse,
   CommunityResponse,
   GetSiteResponse,
+  WebSocketJsonResponse,
 } from '../interfaces';
 import { WebSocketService } from '../services';
-import { msgOp, capitalizeFirstLetter } from '../utils';
-import * as autosize from 'autosize';
+import {
+  wsJsonToRes,
+  capitalizeFirstLetter,
+  toast,
+  randomStr,
+  setupTribute,
+} from '../utils';
+import Tribute from 'tributejs/src/Tribute.js';
+import autosize from 'autosize';
 import { i18n } from '../i18next';
-import { T } from 'inferno-i18next';
 
 import { Community } from '../interfaces';
 
@@ -35,6 +42,8 @@ export class CommunityForm extends Component<
   CommunityFormProps,
   CommunityFormState
 > {
+  private id = `community-form-${randomStr()}`;
+  private tribute: Tribute;
   private subscription: Subscription;
 
   private emptyState: CommunityFormState = {
@@ -52,6 +61,7 @@ export class CommunityForm extends Component<
   constructor(props: any, context: any) {
     super(props, context);
 
+    this.tribute = setupTribute();
     this.state = this.emptyState;
 
     if (this.props.community) {
@@ -67,14 +77,7 @@ export class CommunityForm extends Component<
     }
 
     this.subscription = WebSocketService.Instance.subject
-      .pipe(
-        retryWhen(errors =>
-          errors.pipe(
-            delay(3000),
-            take(10)
-          )
-        )
-      )
+      .pipe(retryWhen(errors => errors.pipe(delay(3000), take(10))))
       .subscribe(
         msg => this.parseMessage(msg),
         err => console.error(err),
@@ -86,7 +89,14 @@ export class CommunityForm extends Component<
   }
 
   componentDidMount() {
-    autosize(document.querySelectorAll('textarea'));
+    var textarea: any = document.getElementById(this.id);
+    autosize(textarea);
+    this.tribute.attach(textarea);
+    textarea.addEventListener('tribute-replaced', () => {
+      this.state.communityForm.description = textarea.value;
+      this.setState(this.state);
+      autosize.update(textarea);
+    });
   }
 
   componentWillUnmount() {
@@ -97,12 +107,13 @@ export class CommunityForm extends Component<
     return (
       <form onSubmit={linkEvent(this, this.handleCreateCommunitySubmit)}>
         <div class="form-group row">
-          <label class="col-12 col-form-label">
-            <T i18nKey="name">#</T>
+          <label class="col-12 col-form-label" htmlFor="community-name">
+            {i18n.t('name')}
           </label>
           <div class="col-12">
             <input
               type="text"
+              id="community-name"
               class="form-control"
               value={this.state.communityForm.name}
               onInput={linkEvent(this, this.handleCommunityNameChange)}
@@ -114,13 +125,15 @@ export class CommunityForm extends Component<
             />
           </div>
         </div>
+
         <div class="form-group row">
-          <label class="col-12 col-form-label">
-            <T i18nKey="title">#</T>
+          <label class="col-12 col-form-label" htmlFor="community-title">
+            {i18n.t('title')}
           </label>
           <div class="col-12">
             <input
               type="text"
+              id="community-title"
               value={this.state.communityForm.title}
               onInput={linkEvent(this, this.handleCommunityTitleChange)}
               class="form-control"
@@ -131,11 +144,12 @@ export class CommunityForm extends Component<
           </div>
         </div>
         <div class="form-group row">
-          <label class="col-12 col-form-label">
-            <T i18nKey="sidebar">#</T>
+          <label class="col-12 col-form-label" htmlFor={this.id}>
+            {i18n.t('sidebar')}
           </label>
           <div class="col-12">
             <textarea
+              id={this.id}
               value={this.state.communityForm.description}
               onInput={linkEvent(this, this.handleCommunityDescriptionChange)}
               class="form-control"
@@ -145,12 +159,13 @@ export class CommunityForm extends Component<
           </div>
         </div>
         <div class="form-group row">
-          <label class="col-12 col-form-label">
-            <T i18nKey="category">#</T>
+          <label class="col-12 col-form-label" htmlFor="community-category">
+            {i18n.t('category')}
           </label>
           <div class="col-12">
             <select
               class="form-control"
+              id="community-category"
               value={this.state.communityForm.category_id}
               onInput={linkEvent(this, this.handleCommunityCategoryChange)}
             >
@@ -167,12 +182,13 @@ export class CommunityForm extends Component<
               <div class="form-check">
                 <input
                   class="form-check-input"
+                  id="community-nsfw"
                   type="checkbox"
                   checked={this.state.communityForm.nsfw}
                   onChange={linkEvent(this, this.handleCommunityNsfwChange)}
                 />
-                <label class="form-check-label">
-                  <T i18nKey="nsfw">#</T>
+                <label class="form-check-label" htmlFor="community-nsfw">
+                  {i18n.t('nsfw')}
                 </label>
               </div>
             </div>
@@ -197,7 +213,7 @@ export class CommunityForm extends Component<
                 class="btn btn-secondary"
                 onClick={linkEvent(this, this.handleCancel)}
               >
-                <T i18nKey="cancel">#</T>
+                {i18n.t('cancel')}
               </button>
             )}
           </div>
@@ -246,34 +262,34 @@ export class CommunityForm extends Component<
     i.props.onCancel();
   }
 
-  parseMessage(msg: any) {
-    let op: UserOperation = msgOp(msg);
+  parseMessage(msg: WebSocketJsonResponse) {
+    let res = wsJsonToRes(msg);
     console.log(msg);
     if (msg.error) {
-      alert(i18n.t(msg.error));
+      toast(i18n.t(msg.error), 'danger');
       this.state.loading = false;
       this.setState(this.state);
       return;
-    } else if (op == UserOperation.ListCategories) {
-      let res: ListCategoriesResponse = msg;
-      this.state.categories = res.categories;
+    } else if (res.op == UserOperation.ListCategories) {
+      let data = res.data as ListCategoriesResponse;
+      this.state.categories = data.categories;
       if (!this.props.community) {
-        this.state.communityForm.category_id = res.categories[0].id;
+        this.state.communityForm.category_id = data.categories[0].id;
       }
       this.setState(this.state);
-    } else if (op == UserOperation.CreateCommunity) {
-      let res: CommunityResponse = msg;
+    } else if (res.op == UserOperation.CreateCommunity) {
+      let data = res.data as CommunityResponse;
       this.state.loading = false;
-      this.props.onCreate(res.community);
+      this.props.onCreate(data.community);
     }
-    // TODO is ths necessary
-    else if (op == UserOperation.EditCommunity) {
-      let res: CommunityResponse = msg;
+    // TODO is this necessary
+    else if (res.op == UserOperation.EditCommunity) {
+      let data = res.data as CommunityResponse;
       this.state.loading = false;
-      this.props.onEdit(res.community);
-    } else if (op == UserOperation.GetSite) {
-      let res: GetSiteResponse = msg;
-      this.state.enable_nsfw = res.site.enable_nsfw;
+      this.props.onEdit(data.community);
+    } else if (res.op == UserOperation.GetSite) {
+      let data = res.data as GetSiteResponse;
+      this.state.enable_nsfw = data.site.enable_nsfw;
       this.setState(this.state);
     }
   }

@@ -9,23 +9,25 @@ third_semver=$(echo $new_tag | cut -d "." -f 3)
 
 # Setting the version on the front end
 cd ../../
-echo "export let version: string = '$(git describe --tags)';" > "ui/src/version.ts"
+echo "export const version: string = '$(git describe --tags)';" > "ui/src/version.ts"
 git add "ui/src/version.ts"
 # Setting the version on the backend
 echo "pub const VERSION: &str = \"$(git describe --tags)\";" > "server/src/version.rs"
 git add "server/src/version.rs"
+# Setting the version for Ansible
+git describe --tags > "ansible/VERSION"
+git add "ansible/VERSION"
 
 cd docker/dev
 
 # Changing the docker-compose prod
 sed -i "s/dessalines\/lemmy:.*/dessalines\/lemmy:$new_tag/" ../prod/docker-compose.yml
+sed -i "s/dessalines\/lemmy:.*/dessalines\/lemmy:$new_tag/" ../../ansible/templates/docker-compose.yml
 git add ../prod/docker-compose.yml
+git add ../../ansible/templates/docker-compose.yml
 
 # The commit
 git commit -m"Version $new_tag"
-
-# Registering qemu binaries
-docker run --rm --privileged multiarch/qemu-user-static:register --reset
 
 # Rebuilding docker
 docker-compose build
@@ -42,6 +44,9 @@ docker push dessalines/lemmy:x64-$new_tag
 # aarch64
 # Only do this on major releases (IE the third semver is 0)
 if [ $third_semver -eq 0 ]; then
+  # Registering qemu binaries
+  docker run --rm --privileged multiarch/qemu-user-static:register --reset
+
   docker build -t lemmy:aarch64 -f Dockerfile.aarch64 ../../
   docker tag lemmy:aarch64 dessalines/lemmy:arm64-$new_tag
   docker push dessalines/lemmy:arm64-$new_tag

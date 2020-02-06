@@ -11,21 +11,19 @@ import {
   SortType,
   Post,
   GetPostsForm,
+  GetCommunityForm,
   ListingType,
   GetPostsResponse,
-  CreatePostLikeResponse,
+  PostResponse,
+  AddModToCommunityResponse,
+  BanFromCommunityResponse,
+  WebSocketJsonResponse,
 } from '../interfaces';
 import { WebSocketService, UserService } from '../services';
 import { PostListings } from './post-listings';
 import { SortSelect } from './sort-select';
 import { Sidebar } from './sidebar';
-import {
-  msgOp,
-  routeSortTypeToEnum,
-  fetchLimit,
-  postRefetchSeconds,
-} from '../utils';
-import { T } from 'inferno-i18next';
+import { wsJsonToRes, routeSortTypeToEnum, fetchLimit, toast } from '../utils';
 import { i18n } from '../i18next';
 
 interface State {
@@ -34,6 +32,7 @@ interface State {
   communityName: string;
   moderators: Array<CommunityUser>;
   admins: Array<UserView>;
+  online: number;
   loading: boolean;
   posts: Array<Post>;
   sort: SortType;
@@ -42,7 +41,6 @@ interface State {
 
 export class Community extends Component<any, State> {
   private subscription: Subscription;
-  private postFetcher: any;
   private emptyState: State = {
     community: {
       id: null,
@@ -64,6 +62,7 @@ export class Community extends Component<any, State> {
     admins: [],
     communityId: Number(this.props.match.params.id),
     communityName: this.props.match.params.name,
+    online: null,
     loading: true,
     posts: [],
     sort: this.getSortTypeFromProps(this.props),
@@ -89,30 +88,22 @@ export class Community extends Component<any, State> {
     this.handleSortChange = this.handleSortChange.bind(this);
 
     this.subscription = WebSocketService.Instance.subject
-      .pipe(
-        retryWhen(errors =>
-          errors.pipe(
-            delay(3000),
-            take(10)
-          )
-        )
-      )
+      .pipe(retryWhen(errors => errors.pipe(delay(3000), take(10))))
       .subscribe(
         msg => this.parseMessage(msg),
         err => console.error(err),
         () => console.log('complete')
       );
 
-    if (this.state.communityId) {
-      WebSocketService.Instance.getCommunity(this.state.communityId);
-    } else if (this.state.communityName) {
-      WebSocketService.Instance.getCommunityByName(this.state.communityName);
-    }
+    let form: GetCommunityForm = {
+      id: this.state.communityId ? this.state.communityId : null,
+      name: this.state.communityName ? this.state.communityName : null,
+    };
+    WebSocketService.Instance.getCommunity(form);
   }
 
   componentWillUnmount() {
     this.subscription.unsubscribe();
-    clearInterval(this.postFetcher);
   }
 
   // Necessary for back button for some reason
@@ -144,17 +135,17 @@ export class Community extends Component<any, State> {
                 {this.state.community.title}
                 {this.state.community.removed && (
                   <small className="ml-2 text-muted font-italic">
-                    <T i18nKey="removed">#</T>
+                    {i18n.t('removed')}
                   </small>
                 )}
                 {this.state.community.nsfw && (
                   <small className="ml-2 text-muted font-italic">
-                    <T i18nKey="nsfw">#</T>
+                    {i18n.t('nsfw')}
                   </small>
                 )}
               </h5>
               {this.selects()}
-              <PostListings posts={this.state.posts} />
+              <PostListings posts={this.state.posts} removeDuplicates />
               {this.paginator()}
             </div>
             <div class="col-12 col-md-4">
@@ -162,6 +153,7 @@ export class Community extends Component<any, State> {
                 community={this.state.community}
                 moderators={this.state.moderators}
                 admins={this.state.admins}
+                online={this.state.online}
               />
             </div>
           </div>
@@ -196,15 +188,17 @@ export class Community extends Component<any, State> {
             class="btn btn-sm btn-secondary mr-1"
             onClick={linkEvent(this, this.prevPage)}
           >
-            <T i18nKey="prev">#</T>
+            {i18n.t('prev')}
           </button>
         )}
-        <button
-          class="btn btn-sm btn-secondary"
-          onClick={linkEvent(this, this.nextPage)}
-        >
-          <T i18nKey="next">#</T>
-        </button>
+        {this.state.posts.length == fetchLimit && (
+          <button
+            class="btn btn-sm btn-secondary"
+            onClick={linkEvent(this, this.nextPage)}
+          >
+            {i18n.t('next')}
+          </button>
+        )}
       </div>
     );
   }
@@ -242,11 +236,6 @@ export class Community extends Component<any, State> {
     );
   }
 
-  keepFetchingPosts() {
-    this.fetchPosts();
-    this.postFetcher = setInterval(() => this.fetchPosts(), postRefetchSeconds);
-  }
-
   fetchPosts() {
     let getPostsForm: GetPostsForm = {
       page: this.state.page,
@@ -258,43 +247,77 @@ export class Community extends Component<any, State> {
     WebSocketService.Instance.getPosts(getPostsForm);
   }
 
-  parseMessage(msg: any) {
+  parseMessage(msg: WebSocketJsonResponse) {
     console.log(msg);
-    let op: UserOperation = msgOp(msg);
+    let res = wsJsonToRes(msg);
     if (msg.error) {
-      alert(i18n.t(msg.error));
+      toast(i18n.t(msg.error), 'danger');
       this.context.router.history.push('/');
       return;
-    } else if (op == UserOperation.GetCommunity) {
-      let res: GetCommunityResponse = msg;
-      this.state.community = res.community;
-      this.state.moderators = res.moderators;
-      this.state.admins = res.admins;
+    } else if (msg.reconnect) {
+      this.fetchPosts();
+    } else if (res.op == UserOperation.GetCommunity) {
+      let data = res.data as GetCommunityResponse;
+      this.state.community = data.community;
+      this.state.moderators = data.moderators;
+      this.state.admins = data.admins;
+      this.state.online = data.online;
       document.title = `/c/${this.state.community.name} - ${WebSocketService.Instance.site.name}`;
       this.setState(this.state);
-      this.keepFetchingPosts();
-    } else if (op == UserOperation.EditCommunity) {
-      let res: CommunityResponse = msg;
-      this.state.community = res.community;
+      this.fetchPosts();
+    } else if (res.op == UserOperation.EditCommunity) {
+      let data = res.data as CommunityResponse;
+      this.state.community = data.community;
       this.setState(this.state);
-    } else if (op == UserOperation.FollowCommunity) {
-      let res: CommunityResponse = msg;
-      this.state.community.subscribed = res.community.subscribed;
+    } else if (res.op == UserOperation.FollowCommunity) {
+      let data = res.data as CommunityResponse;
+      this.state.community.subscribed = data.community.subscribed;
       this.state.community.number_of_subscribers =
-        res.community.number_of_subscribers;
+        data.community.number_of_subscribers;
       this.setState(this.state);
-    } else if (op == UserOperation.GetPosts) {
-      let res: GetPostsResponse = msg;
-      this.state.posts = res.posts;
+    } else if (res.op == UserOperation.GetPosts) {
+      let data = res.data as GetPostsResponse;
+      this.state.posts = data.posts;
       this.state.loading = false;
       this.setState(this.state);
-    } else if (op == UserOperation.CreatePostLike) {
-      let res: CreatePostLikeResponse = msg;
-      let found = this.state.posts.find(c => c.id == res.post.id);
-      found.my_vote = res.post.my_vote;
-      found.score = res.post.score;
-      found.upvotes = res.post.upvotes;
-      found.downvotes = res.post.downvotes;
+    } else if (res.op == UserOperation.EditPost) {
+      let data = res.data as PostResponse;
+      let found = this.state.posts.find(c => c.id == data.post.id);
+
+      found.url = data.post.url;
+      found.name = data.post.name;
+      found.nsfw = data.post.nsfw;
+
+      this.setState(this.state);
+    } else if (res.op == UserOperation.CreatePost) {
+      let data = res.data as PostResponse;
+      this.state.posts.unshift(data.post);
+      this.setState(this.state);
+    } else if (res.op == UserOperation.CreatePostLike) {
+      let data = res.data as PostResponse;
+      let found = this.state.posts.find(c => c.id == data.post.id);
+
+      found.score = data.post.score;
+      found.upvotes = data.post.upvotes;
+      found.downvotes = data.post.downvotes;
+      if (data.post.my_vote !== null) {
+        found.my_vote = data.post.my_vote;
+        found.upvoteLoading = false;
+        found.downvoteLoading = false;
+      }
+
+      this.setState(this.state);
+    } else if (res.op == UserOperation.AddModToCommunity) {
+      let data = res.data as AddModToCommunityResponse;
+      this.state.moderators = data.moderators;
+      this.setState(this.state);
+    } else if (res.op == UserOperation.BanFromCommunity) {
+      let data = res.data as BanFromCommunityResponse;
+
+      this.state.posts
+        .filter(p => p.creator_id == data.user.id)
+        .forEach(p => (p.banned = data.banned));
+
       this.setState(this.state);
     }
   }

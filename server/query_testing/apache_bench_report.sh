@@ -1,4 +1,5 @@
-#!/bin/sh
+#!/bin/bash
+set -e
 
 declare -a arr=(
 "https://mastodon.social/"
@@ -7,6 +8,7 @@ declare -a arr=(
 "https://dev.lemmy.ml/feeds/all.xml"
 "https://dev.lemmy.ml/.well-known/nodeinfo"
 "https://fediverse.blog/.well-known/nodeinfo"
+"https://torrents-csv.ml/service/search?q=wheel&page=1&type_=torrent"
 )
 
 ## now loop through the above array

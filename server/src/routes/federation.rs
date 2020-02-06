@@ -1,6 +1,6 @@
 use crate::api::community::ListCommunities;
+use crate::api::Oper;
 use crate::api::Perform;
-use crate::api::{Oper, UserOperation};
 use crate::apub;
 use crate::settings::Settings;
 use actix_web::web::Query;
@@ -29,7 +29,7 @@ pub fn config(cfg: &mut web::ServiceConfig) {
         "/api/v1/communities/list",
         web::get().to(
           |query: Query<ListCommunities>, db: web::Data<Pool<ConnectionManager<PgConnection>>>| {
-            let res = Oper::new(UserOperation::ListCommunities, query.into_inner())
+            let res = Oper::new(query.into_inner())
               .perform(&db.get().unwrap())
               .unwrap();
             HttpResponse::Ok()

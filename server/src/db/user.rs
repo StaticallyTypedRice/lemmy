@@ -3,7 +3,7 @@ use crate::schema::user_;
 use crate::schema::user_::dsl::*;
 use crate::{is_email_regex, Settings};
 use bcrypt::{hash, DEFAULT_COST};
-use jsonwebtoken::{decode, encode, Header, TokenData, Validation};
+use jsonwebtoken::{decode, encode, DecodingKey, EncodingKey, Header, TokenData, Validation};
 
 #[derive(Queryable, Identifiable, PartialEq, Debug)]
 #[table_name = "user_"]
@@ -26,6 +26,7 @@ pub struct User_ {
   pub lang: String,
   pub show_avatars: bool,
   pub send_notifications_to_email: bool,
+  pub matrix_user_id: Option<String>,
 }
 
 #[derive(Insertable, AsChangeset, Clone)]
@@ -47,6 +48,7 @@ pub struct UserForm {
   pub lang: String,
   pub show_avatars: bool,
   pub send_notifications_to_email: bool,
+  pub matrix_user_id: Option<String>,
 }
 
 impl Crud<UserForm> for User_ {
@@ -113,7 +115,11 @@ impl Claims {
       validate_exp: false,
       ..Validation::default()
     };
-    decode::<Claims>(&jwt, Settings::get().jwt_secret.as_ref(), &v)
+    decode::<Claims>(
+      &jwt,
+      &DecodingKey::from_secret(Settings::get().jwt_secret.as_ref()),
+      &v,
+    )
   }
 }
 
@@ -135,7 +141,7 @@ impl User_ {
     encode(
       &Header::default(),
       &my_claims,
-      Settings::get().jwt_secret.as_ref(),
+      &EncodingKey::from_secret(Settings::get().jwt_secret.as_ref()),
     )
     .unwrap()
   }
@@ -184,6 +190,7 @@ mod tests {
       preferred_username: None,
       password_encrypted: "nope".into(),
       email: None,
+      matrix_user_id: None,
       avatar: None,
       admin: false,
       banned: false,
@@ -206,6 +213,7 @@ mod tests {
       preferred_username: None,
       password_encrypted: "nope".into(),
       email: None,
+      matrix_user_id: None,
       avatar: None,
       admin: false,
       banned: false,

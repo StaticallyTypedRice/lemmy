@@ -3,11 +3,10 @@ use diesel::PgConnection;
 use std::str::FromStr;
 
 #[derive(Serialize, Deserialize)]
-pub struct ListCategories;
+pub struct ListCategories {}
 
 #[derive(Serialize, Deserialize)]
 pub struct ListCategoriesResponse {
-  op: String,
   categories: Vec<Category>,
 }
 
@@ -19,11 +18,11 @@ pub struct Search {
   sort: String,
   page: Option<i64>,
   limit: Option<i64>,
+  auth: Option<String>,
 }
 
 #[derive(Serialize, Deserialize)]
 pub struct SearchResponse {
-  op: String,
   type_: String,
   comments: Vec<CommentView>,
   posts: Vec<PostView>,
@@ -41,7 +40,6 @@ pub struct GetModlog {
 
 #[derive(Serialize, Deserialize)]
 pub struct GetModlogResponse {
-  op: String,
   removed_posts: Vec<ModRemovePostView>,
   locked_posts: Vec<ModLockPostView>,
   stickied_posts: Vec<ModStickyPostView>,
@@ -74,17 +72,15 @@ pub struct EditSite {
 }
 
 #[derive(Serialize, Deserialize)]
-pub struct GetSite;
+pub struct GetSite {}
 
 #[derive(Serialize, Deserialize)]
 pub struct SiteResponse {
-  op: String,
   site: SiteView,
 }
 
 #[derive(Serialize, Deserialize)]
 pub struct GetSiteResponse {
-  op: String,
   site: Option<SiteView>,
   admins: Vec<UserView>,
   banned: Vec<UserView>,
@@ -104,10 +100,7 @@ impl Perform<ListCategoriesResponse> for Oper<ListCategories> {
     let categories: Vec<Category> = Category::list_all(&conn)?;
 
     // Return the jwt
-    Ok(ListCategoriesResponse {
-      op: self.op.to_string(),
-      categories,
-    })
+    Ok(ListCategoriesResponse { categories })
   }
 }
 
@@ -171,7 +164,6 @@ impl Perform<GetModlogResponse> for Oper<GetModlog> {
 
     // Return the jwt
     Ok(GetModlogResponse {
-      op: self.op.to_string(),
       removed_posts,
       locked_posts,
       stickied_posts,
@@ -191,20 +183,24 @@ impl Perform<SiteResponse> for Oper<CreateSite> {
 
     let claims = match Claims::decode(&data.auth) {
       Ok(claims) => claims.claims,
-      Err(_e) => return Err(APIError::err(&self.op, "not_logged_in").into()),
+      Err(_e) => return Err(APIError::err("not_logged_in").into()),
     };
 
-    if has_slurs(&data.name)
-      || (data.description.is_some() && has_slurs(&data.description.to_owned().unwrap()))
-    {
-      return Err(APIError::err(&self.op, "no_slurs").into());
+    if let Err(slurs) = slur_check(&data.name) {
+      return Err(APIError::err(&slurs_vec_to_str(slurs)).into());
+    }
+
+    if let Some(description) = &data.description {
+      if let Err(slurs) = slur_check(description) {
+        return Err(APIError::err(&slurs_vec_to_str(slurs)).into());
+      }
     }
 
     let user_id = claims.id;
 
     // Make sure user is an admin
     if !UserView::read(&conn, user_id)?.admin {
-      return Err(APIError::err(&self.op, "not_an_admin").into());
+      return Err(APIError::err("not_an_admin").into());
     }
 
     let site_form = SiteForm {
@@ -219,15 +215,12 @@ impl Perform<SiteResponse> for Oper<CreateSite> {
 
     match Site::create(&conn, &site_form) {
       Ok(site) => site,
-      Err(_e) => return Err(APIError::err(&self.op, "site_already_exists").into()),
+      Err(_e) => return Err(APIError::err("site_already_exists").into()),
     };
 
     let site_view = SiteView::read(&conn)?;
 
-    Ok(SiteResponse {
-      op: self.op.to_string(),
-      site: site_view,
-    })
+    Ok(SiteResponse { site: site_view })
   }
 }
 
@@ -237,20 +230,24 @@ impl Perform<SiteResponse> for Oper<EditSite> {
 
     let claims = match Claims::decode(&data.auth) {
       Ok(claims) => claims.claims,
-      Err(_e) => return Err(APIError::err(&self.op, "not_logged_in").into()),
+      Err(_e) => return Err(APIError::err("not_logged_in").into()),
     };
 
-    if has_slurs(&data.name)
-      || (data.description.is_some() && has_slurs(&data.description.to_owned().unwrap()))
-    {
-      return Err(APIError::err(&self.op, "no_slurs").into());
+    if let Err(slurs) = slur_check(&data.name) {
+      return Err(APIError::err(&slurs_vec_to_str(slurs)).into());
+    }
+
+    if let Some(description) = &data.description {
+      if let Err(slurs) = slur_check(description) {
+        return Err(APIError::err(&slurs_vec_to_str(slurs)).into());
+      }
     }
 
     let user_id = claims.id;
 
     // Make sure user is an admin
     if !UserView::read(&conn, user_id)?.admin {
-      return Err(APIError::err(&self.op, "not_an_admin").into());
+      return Err(APIError::err("not_an_admin").into());
     }
 
     let found_site = Site::read(&conn, 1)?;
@@ -267,15 +264,12 @@ impl Perform<SiteResponse> for Oper<EditSite> {
 
     match Site::update(&conn, 1, &site_form) {
       Ok(site) => site,
-      Err(_e) => return Err(APIError::err(&self.op, "couldnt_update_site").into()),
+      Err(_e) => return Err(APIError::err("couldnt_update_site").into()),
     };
 
     let site_view = SiteView::read(&conn)?;
 
-    Ok(SiteResponse {
-      op: self.op.to_string(),
-      site: site_view,
-    })
+    Ok(SiteResponse { site: site_view })
   }
 }
 
@@ -300,7 +294,6 @@ impl Perform<GetSiteResponse> for Oper<GetSite> {
     let banned = UserView::banned(&conn)?;
 
     Ok(GetSiteResponse {
-      op: self.op.to_string(),
       site: site_view,
       admins,
       banned,
@@ -312,6 +305,17 @@ impl Perform<GetSiteResponse> for Oper<GetSite> {
 impl Perform<SearchResponse> for Oper<Search> {
   fn perform(&self, conn: &PgConnection) -> Result<SearchResponse, Error> {
     let data: &Search = &self.data;
+
+    let user_id: Option<i32> = match &data.auth {
+      Some(auth) => match Claims::decode(&auth) {
+        Ok(claims) => {
+          let user_id = claims.claims.id;
+          Some(user_id)
+        }
+        Err(_e) => None,
+      },
+      None => None,
+    };
 
     let sort = SortType::from_str(&data.sort)?;
     let type_ = SearchType::from_str(&data.type_)?;
@@ -330,6 +334,7 @@ impl Perform<SearchResponse> for Oper<Search> {
           .show_nsfw(true)
           .for_community_id(data.community_id)
           .search_term(data.q.to_owned())
+          .my_user_id(user_id)
           .page(data.page)
           .limit(data.limit)
           .list()?;
@@ -338,6 +343,7 @@ impl Perform<SearchResponse> for Oper<Search> {
         comments = CommentQueryBuilder::create(&conn)
           .sort(&sort)
           .search_term(data.q.to_owned())
+          .my_user_id(user_id)
           .page(data.page)
           .limit(data.limit)
           .list()?;
@@ -364,6 +370,7 @@ impl Perform<SearchResponse> for Oper<Search> {
           .show_nsfw(true)
           .for_community_id(data.community_id)
           .search_term(data.q.to_owned())
+          .my_user_id(user_id)
           .page(data.page)
           .limit(data.limit)
           .list()?;
@@ -371,6 +378,7 @@ impl Perform<SearchResponse> for Oper<Search> {
         comments = CommentQueryBuilder::create(&conn)
           .sort(&sort)
           .search_term(data.q.to_owned())
+          .my_user_id(user_id)
           .page(data.page)
           .limit(data.limit)
           .list()?;
@@ -403,7 +411,6 @@ impl Perform<SearchResponse> for Oper<Search> {
 
     // Return the jwt
     Ok(SearchResponse {
-      op: self.op.to_string(),
       type_: data.type_.to_owned(),
       comments,
       posts,
@@ -419,7 +426,7 @@ impl Perform<GetSiteResponse> for Oper<TransferSite> {
 
     let claims = match Claims::decode(&data.auth) {
       Ok(claims) => claims.claims,
-      Err(_e) => return Err(APIError::err(&self.op, "not_logged_in").into()),
+      Err(_e) => return Err(APIError::err("not_logged_in").into()),
     };
 
     let user_id = claims.id;
@@ -428,7 +435,7 @@ impl Perform<GetSiteResponse> for Oper<TransferSite> {
 
     // Make sure user is the creator
     if read_site.creator_id != user_id {
-      return Err(APIError::err(&self.op, "not_an_admin").into());
+      return Err(APIError::err("not_an_admin").into());
     }
 
     let site_form = SiteForm {
@@ -443,7 +450,7 @@ impl Perform<GetSiteResponse> for Oper<TransferSite> {
 
     match Site::update(&conn, 1, &site_form) {
       Ok(site) => site,
-      Err(_e) => return Err(APIError::err(&self.op, "couldnt_update_site").into()),
+      Err(_e) => return Err(APIError::err("couldnt_update_site").into()),
     };
 
     // Mod tables
@@ -468,7 +475,6 @@ impl Perform<GetSiteResponse> for Oper<TransferSite> {
     let banned = UserView::banned(&conn)?;
 
     Ok(GetSiteResponse {
-      op: self.op.to_string(),
       site: Some(site_view),
       admins,
       banned,
