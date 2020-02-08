@@ -21,6 +21,8 @@ before_cache:
   - cargo clean
 before_script:
   - sudo service postgresql start
+  - sudo journalctl -xe
+  - systemctl status postgresql.service
   - psql -c "create user lemmy with password 'password' superuser;" -U postgres
   - psql -c 'create database lemmy with owner lemmy;' -U postgres
   - rustup component add clippy --toolchain stable-x86_64-unknown-linux-gnu
