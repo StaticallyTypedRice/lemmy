@@ -37,7 +37,14 @@ env:
     - DATABASE_URL=postgres://lemmy:password@localhost:5432/lemmy
     - RUST_TEST_THREADS=1
 
-#addons:
-#  postgresql: "9.4"
-services:
-  - postgresql
+addons:
+  postgresql: "10"
+  apt:
+    packages:
+    - postgresql-10
+    - postgresql-client-10
+env:
+  global:
+  - PGPORT=5433
+#services:
+#  - postgresql
