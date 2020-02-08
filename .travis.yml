@@ -20,6 +20,7 @@ before_cache:
   - rm -rfv target/debug/lemmy_server.d
   - cargo clean
 before_script:
+  - service postgresql start
   - psql -c "create user lemmy with password 'password' superuser;" -U postgres
   - psql -c 'create database lemmy with owner lemmy;' -U postgres
   - rustup component add clippy --toolchain stable-x86_64-unknown-linux-gnu
