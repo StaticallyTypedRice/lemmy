@@ -38,11 +38,9 @@ env:
     - RUST_TEST_THREADS=1
 addons:
   apt:
-    sources:
-    - xenial-pgdg-9.5
     packages:
-    - postgresql-9.4
-    - postgresql-contrib-9.4
+    - postgresql
+    - postgresql-contrib
   postgresql: 9.4
 env:
   global:
