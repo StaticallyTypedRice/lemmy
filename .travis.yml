@@ -1,6 +1,12 @@
 language: rust
 rust:
   - stable
+arch:
+  - amd64
+  - ppc64le
+  - s390x
+  - arm64
+os: linux
 matrix:
   allow_failures:
     - rust: nightly
