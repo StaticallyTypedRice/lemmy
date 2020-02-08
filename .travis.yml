@@ -36,13 +36,14 @@ env:
   global:
     - DATABASE_URL=postgres://lemmy:password@localhost:5432/lemmy
     - RUST_TEST_THREADS=1
-
 addons:
-  postgresql: "10"
   apt:
+#    sources:
+#    - xenial-pgdg-9.5
     packages:
-    - postgresql-10
-    - postgresql-client-10
+    - postgresql-9.4
+    - postgresql-contrib-9.4
+  postgresql: 9.4
 env:
   global:
   - PGPORT=5433
