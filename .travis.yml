@@ -20,7 +20,7 @@ before_cache:
   - rm -rfv target/debug/lemmy_server.d
   - cargo clean
 before_script:
-  - /usr/lib/postgresql/12/bin/pg_ctl -D /var/lib/postgresql/12/main -l logfile start
+#  - /usr/lib/postgresql/12/bin/pg_ctl -D /var/lib/postgresql/12/main -l logfile start
   - psql -c "create user lemmy with password 'password' superuser;" -U postgres
   - psql -c 'create database lemmy with owner lemmy;' -U postgres
   - rustup component add clippy --toolchain stable-x86_64-unknown-linux-gnu
@@ -40,8 +40,8 @@ env:
 addons:
   apt:
     packages:
-    - postgresql-12
-  postgresql: 12
+    - postgresql
+#  postgresql: 9.5
 env:
   global:
   - PGPORT=5433
