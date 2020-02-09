@@ -1,12 +1,19 @@
 language: rust
 rust:
   - stable
-arch:
-  - amd64
-  - arm64
-#  - ppc64le
-#  - s390x
-os: linux
+
+jobs:
+  include:
+   - os: linux
+     arch: amd64
+     script: /usr/lib/postgresql/12/bin/pg_ctl -D /var/lib/postgresql/12/main -l logfile start
+   - os: linux
+     arch: arm64
+     addons:
+       apt:
+       packages:
+         - postgresql
+
 matrix:
   allow_failures:
     - rust: nightly
@@ -40,7 +47,7 @@ addons:
   apt:
     packages:
     - postgresql
-#  postgresql: 9.5
+  postgresql: 9.5
 env:
   global:
   - PGPORT=5433
