@@ -9,10 +9,6 @@ jobs:
      script: /usr/lib/postgresql/12/bin/pg_ctl -D /var/lib/postgresql/12/main -l logfile start
    - os: linux
      arch: arm64
-     addons:
-       apt:
-       packages:
-         - postgresql
 
 matrix:
   allow_failures:
