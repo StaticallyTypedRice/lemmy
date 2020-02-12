@@ -555,6 +555,10 @@ export class Main extends Component<any, MainState> {
     this.fetchData();
     window.scrollTo(0, 0);
   }
+    
+  handlePageClose(i: Main) {
+   return i.hasUnsavedData;
+  }
 
   fetchData() {
     if (this.state.dataType == DataType.Post) {
@@ -701,3 +705,5 @@ export class Main extends Component<any, MainState> {
     }
   }
 }
+
+window.onbeforeunload = handlePageClose;
