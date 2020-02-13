@@ -68,7 +68,7 @@ interface MainState {
   dataType: DataType;
   sort: SortType;
   page: number;
-  hasUnsavedData: boolean,
+  hasUnsavedData: boolean;
 }
 
 export class Main extends Component<any, MainState> {
@@ -114,6 +114,7 @@ export class Main extends Component<any, MainState> {
     this.handleSortChange = this.handleSortChange.bind(this);
     this.handleListingTypeChange = this.handleListingTypeChange.bind(this);
     this.handleDataTypeChange = this.handleDataTypeChange.bind(this);
+    this.handlePageClose = this.handlePageClose.bind(this);
 
     this.subscription = WebSocketService.Instance.subject
       .pipe(retryWhen(errors => errors.pipe(delay(3000), take(10))))
@@ -555,9 +556,9 @@ export class Main extends Component<any, MainState> {
     this.fetchData();
     window.scrollTo(0, 0);
   }
-    
+
   handlePageClose(i: Main) {
-   return i.hasUnsavedData;
+   return i.state.hasUnsavedData;
   }
 
   fetchData() {
@@ -705,5 +706,3 @@ export class Main extends Component<any, MainState> {
     }
   }
 }
-
-window.onbeforeunload = handlePageClose;
