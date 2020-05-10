@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/sh
 set -e
 
 # Set the database variable to the default first.
@@ -10,25 +10,33 @@ export LEMMY_DATABASE_URL=postgres://lemmy:password@localhost:5432/lemmy
 export JWT_SECRET=changeme
 export HOSTNAME=rrr
 
+yes_no_prompt_invalid() {
+  echo "Invalid input. Please enter either \"y\" or \"n\"." 1>&2
+}
+
+ask_to_init_db() {
+  init_db_valid=0
+  init_db_final=0
+  while [ "$init_db_valid" == 0 ]
+  do
+    read -p "Initialize database (y/n)? " init_db
+    case "$init_db" in
+      [yY]* ) init_db_valid=1; init_db_final=1;;
+      [nN]* ) init_db_valid=1; init_db_final=0;;
+      * ) yes_no_prompt_invalid;;
+    esac
+    echo
+  done
+  if [ "$init_db_final" = 1 ]
+  then
+    source ./server/db-init.sh
+    read -n 1 -s -r -p "Press ANY KEY to continue execution of this script, press CTRL+C to quit..."
+    echo
+  fi
+}
+
 # Optionally initialize the database
-init_db_valid=0
-init_db_final=0
-while [ "$init_db_valid" == 0 ]
-do
-  read -p "Initialize database (y/n)? " init_db
-  case "$init_db" in
-    [yY]* ) init_db_valid=1; init_db_final=1;;
-    [nN]* ) init_db_valid=1; init_db_final=0;;
-    * ) echo "Invalid input. Please enter either \"y\" or \"n\"." 1>&2;;
-  esac
-  echo
-done
-if [ "$init_db_final" = 1 ]
-then
-  source ./server/db-init.sh
-  read -n 1 -s -r -p "Press ANY KEY to continue execution of this script, press CTRL+C to quit..."
-  echo
-fi
+ask_to_init_db
 
 # Build the web client
 cd ui
